@@ -86,10 +86,10 @@ var reset = function () {
 var bulletCollision = function() {
 	for (var i = 0; i < bullets.length; i++){
 		if (
-			bullets[i].x <= (monster.x + 24)
-				&& monster.x <= (bullets[i].x + 24)
+			bullets[i].x <= (monster.x + 24) //Within the right edge
+				&& monster.x <= (bullets[i].x + 16)
 				&& bullets[i].y <= (monster.y + 24)
-				&& monster.y <= (bullets[i].y + 24)
+				&& monster.y <= (bullets[i].y + 16)
 		) {
 			bullets.splice(i, 1);
 			return true;
