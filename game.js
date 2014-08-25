@@ -80,7 +80,7 @@ addEventListener("keyup", function (e) {
 
 var reset = function () {
 	monster.x = 32 + (Math.random() * (canvas.width - 64));
-	monster.y = 32 + (Math.random() * (canvas.width - 64));
+	monster.y = 32 + (Math.random() * (canvas.height - 64));
 };
 
 var bulletCollision = function() {
