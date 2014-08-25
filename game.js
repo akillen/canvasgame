@@ -32,10 +32,27 @@ bulletImage.onload = function(){
 }
 bulletImage.src = "images/bullet.png";
 
+var direction = Object.freeze({UP: "up", DOWN: "down", LEFT: "left", RIGHT: "right"});
+
+var shotDelay = 300;
+var lastShot = Date.now() - shotDelay;
+
+
 var hero = {
 	speed: 256,
 	x: 0,
-	y: 0
+	y: 0,
+	shotDelay: 300,
+	lastShot: Date.now() - this.shotDelay,
+	readyToShoot: function() {
+		return Date.now() - this.lastShot > shotDelay;
+	},
+	shoot: function (bulletDir) {
+		if (this.readyToShoot()){
+			bullets[bullets.length] = {dir: bulletDir, x: this.x + 8, y: this.y + 8};
+			this.lastShot = Date.now();
+		}
+	}
 };
 
 var monster = {
@@ -45,13 +62,13 @@ var monster = {
 
 var monstersCaught = 0;
 
-var shotDelay = 300;
-var lastShot = Date.now() - shotDelay;
-
 var bullets = [];
-var keysDown = {};
+
 var moveKeys = [87, 83, 65, 68];
 var shootKeys = [37, 38, 39, 40];
+
+var keysDown = {};
+
 addEventListener("keydown", function (e) {
 	keysDown[e.keyCode] = true;
 }, false);
@@ -62,7 +79,6 @@ addEventListener("keyup", function (e) {
 
 
 var reset = function () {
-
 	monster.x = 32 + (Math.random() * (canvas.width - 64));
 	monster.y = 32 + (Math.random() * (canvas.width - 64));
 };
@@ -80,6 +96,10 @@ var bulletCollision = function() {
 		}
 	}
 	return false;
+};
+
+var addBullet = function (flyDirection, x, y) {
+	bullets[bullets.length] = {dir: flyDirection, x: x, y: y};
 };
 
 //Update game objects
@@ -100,28 +120,16 @@ var update = function (modifier) {
 
 	//Shoot keys
 	if (38 in keysDown) { // Player holding up
-		if (Date.now() - lastShot > shotDelay) {
-			bullets[bullets.length] = {dir: "up", x: hero.x + 8, y: hero.y + 8};
-			lastShot = Date.now();
-		}
+		hero.shoot(direction.UP);
 	}
 	if (40 in keysDown) { // Player holding down
-		if (Date.now() - lastShot > shotDelay) {
-			bullets[bullets.length] = {dir: "down", x: hero.x + 8, y: hero.y + 8};
-			lastShot = Date.now();
-		}
+		hero.shoot(direction.DOWN);
 	}
 	if (37 in keysDown) { // Player holding left
-		if (Date.now() - lastShot > shotDelay) {
-			bullets[bullets.length] = {dir: "left", x: hero.x + 8, y: hero.y + 8};
-			lastShot = Date.now();
-		}
+		hero.shoot(direction.LEFT);
 	}
 	if (39 in keysDown) { // Player holding right
-		if (Date.now() - lastShot > shotDelay) {
-			bullets[bullets.length] = {dir: "right", x: hero.x + 8, y: hero.y + 8};
-			lastShot = Date.now();
-		}
+		hero.shoot(direction.RIGHT);
 	}
 
 	//Move each bullet
@@ -140,9 +148,7 @@ var update = function (modifier) {
 		}
 	}
 	//Collision
-	if (
-		bulletCollision()
-	) {
+	if (bulletCollision()) {
 		++monstersCaught;
 		reset();
 	}
