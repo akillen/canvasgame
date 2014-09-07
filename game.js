@@ -39,10 +39,31 @@ bulletImage.src = "images/bullet.png";
 //Constants
 
 var direction = Object.freeze({UP: "up", DOWN: "down", LEFT: "left", RIGHT: "right"});
-var moveKeys = [87, 83, 65, 68];
-var shootKeys = [37, 38, 39, 40];
+var moveKeys = Object.freeze([87, 83, 65, 68]);
+var shootKeys = Object.freeze([37, 38, 39, 40]);
 
 //Classes
+
+function Bullet(flyDirection, x, y) {
+	this.dir = flyDirection;
+	this.x = x;
+	this.y = y;
+	var speed = 280;
+	this.move = function(modifier){
+		if (this.dir == direction.UP) {
+			this.y -= speed * modifier;
+		}
+		if (this.dir == direction.DOWN) {
+			this.y += speed * modifier;
+		}
+		if (this.dir == direction.LEFT) {
+			this.x -= speed * modifier;
+		}
+		if (this.dir == direction.RIGHT) {
+			this.x += speed * modifier;
+		}
+	};
+}
 
 function Hero() {
 	this.health = 4;
@@ -50,14 +71,16 @@ function Hero() {
 	this.speed = 0;
 	this.x = 0;
 	this.y = 0;
+	
 	var shotDelay = 300;
 	var lastShot = Date.now() - shotDelay;
+
 	this.readyToShoot = function() {
 		return Date.now() - lastShot > shotDelay;
 	};
 	this.shoot = function (bulletCollection, bulletDir) {
 		if (this.readyToShoot()){
-			bulletCollection[bulletCollection.length] = {dir: bulletDir, x: this.x + 8, y: this.y + 8};
+			bulletCollection[bulletCollection.length] = new Bullet(bulletDir, this.x + 8, this.y + 8);
 			lastShot = Date.now();
 		}
 	};
@@ -71,11 +94,37 @@ function Hero() {
 			this.speed += delta * 800;
 		}
 	};
+
+	this.move = function(directions, modifier){
+		if (directions[direction.UP] && hero.y > 0) {
+			hero.y -= hero.speed * modifier;
+		}
+		if (directions[direction.DOWN] && hero.y < canvas.width - 32) {
+			hero.y += hero.speed * modifier;
+		}
+		if (directions[direction.LEFT] && hero.x > 0) {
+			hero.x -= hero.speed * modifier;
+		}
+		if (directions[direction.RIGHT] && hero.x < canvas.width - 32) {
+			hero.x += hero.speed * modifier;
+		}
+	};
 };
 
 function Monster() {
 	this.x = 0;
 	this.y = 0;
+	var maxspeed = 150;
+	this.moveTowards = function(target, modifier){
+		if (target.x > this.x)
+			this.x += maxspeed * modifier;
+		if (target.x < this.x)
+			this.x -= maxspeed * modifier;
+		if (target.y > this.y)
+			this.y += maxspeed * modifier;
+		if (target.y < this.y)
+			this.y -= maxspeed * modifier;
+	};
 }
 
 //Game state objects
@@ -117,28 +166,39 @@ var bulletCollision = function() {
 	return false;
 };
 
-var addBullet = function (flyDirection, x, y) {
-	bullets[bullets.length] = {dir: flyDirection, x: x, y: y};
-};
+var removeOutOfScopeBullets = function(){
+	for (var i = 0; i < bullets.length; i++){
+		if (
+			bullets[i].x < -16
+			|| bullets[i].x > canvas.width + 16
+			|| bullets[i].y < -16
+			|| bullets[i].y > canvas.height + 16
+				
+		) {
+			bullets.splice(i, 1);
+		}
+	}
+}
 
 //Update game objects
 var update = function (modifier) {
 	//Movement
+	var directions = {};
 	var heroMoving = false;
-	if (87 in keysDown && hero.y > 0) { //W
-		hero.y -= hero.speed * modifier;
+	if (87 in keysDown) {
+		directions[direction.UP] = true;
 		heroMoving = true;
 	}
-	if (83 in keysDown && hero.y < canvas.width - 64) { //S
-		hero.y += hero.speed * modifier;
+	if (83 in keysDown) { //S
+		directions[direction.DOWN] = true;
 		heroMoving = true;
 	}
-	if (65 in keysDown && hero.x > 0) { //A
-		hero.x -= hero.speed * modifier;
+	if (65 in keysDown) { //A
+		directions[direction.LEFT] = true;
 		heroMoving = true;
 	}
-	if (68 in keysDown && hero.x < canvas.width - 32) { //D
-		hero.x += hero.speed * modifier;
+	if (68 in keysDown) { //D
+		directions[direction.RIGHT] = true;
 		heroMoving = true;
 	}
 	if (heroMoving) { 
@@ -147,6 +207,10 @@ var update = function (modifier) {
 		hero.speed = 0;
 	}
 
+	hero.move(directions, modifier);
+	directions = {};
+
+	monster.moveTowards(hero, modifier);
 
 	//Shoot keys
 	if (38 in keysDown) { // Player holding up
@@ -165,18 +229,7 @@ var update = function (modifier) {
 
 	//Move each bullet
 	for (var i = 0; i < bullets.length; i++){
-		if (bullets[i].dir == "up") {
-			bullets[i].y -= 280 * modifier;
-		}
-		if (bullets[i].dir == "down") {
-			bullets[i].y += 280 * modifier;
-		}
-		if (bullets[i].dir == "left") {
-			bullets[i].x -= 280 * modifier;
-		}
-		if (bullets[i].dir == "right") {
-			bullets[i].x += 280 * modifier;
-		}
+		bullets[i].move(modifier);
 	}
 
 	//Hero only takes damage periodically (to avoid taking a ton of damage really quickly)
@@ -188,15 +241,17 @@ var update = function (modifier) {
 	}
 
 	//Collision
+	//Refactor to support more the one monster
 	if (bulletCollision()) {
 		++monstersCaught;
 		reset();
 	}
 
 	checkForHeroCollision();
+
+	removeOutOfScopeBullets();
 }
 
-var heroInvulnTime = 0;
 var checkForHeroCollision = function(){
 	if (
 		hero.x <= (monster.x + 32)
@@ -233,7 +288,11 @@ var render = function(){
 	ctx.textAlign = "left";
 	ctx.textBaseline = "top";
 	ctx.fillText("Health: " + hero.health, 32, 32);
+
+	//Debug output
+	ctx.font = "16px Helvetica";
 	ctx.fillText("Invuln:" + heroInvulnTime, 220, 32);
+	ctx.fillText("Bullets:" + bullets.length, 220, 50);
 };
 
 var main = function () {
