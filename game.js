@@ -134,6 +134,7 @@ var monstersCaught = 0;
 var heroInvulnTime = 0;
 var bullets = [];
 var keysDown = {};
+var gameOver = false;
 
 addEventListener("keydown", function (e) {
 	keysDown[e.keyCode] = true;
@@ -250,6 +251,8 @@ var update = function (modifier) {
 	checkForHeroCollision();
 
 	removeOutOfScopeBullets();
+
+	gameOver = (hero.health == 0);
 }
 
 var checkForHeroCollision = function(){
@@ -293,18 +296,27 @@ var render = function(){
 	ctx.font = "16px Helvetica";
 	ctx.fillText("Invuln:" + heroInvulnTime, 220, 32);
 	ctx.fillText("Bullets:" + bullets.length, 220, 50);
+
+	if (gameOver){
+		ctx.font = "24px Helvetica";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "center";
+		ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
+	}
 };
 
 var main = function () {
-	var now = Date.now();
-	var delta = now - then;
+	if (!gameOver){
+		var now = Date.now();
+		var delta = now - then;
 
-	update(delta / 1000);
-	render();
+		update(delta / 1000);
+		render();
 
-	then = now;
+		then = now;
 
-	requestAnimationFrame(main);
+		requestAnimationFrame(main);
+	}
 };
 
 var w = window;
