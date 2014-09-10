@@ -63,6 +63,16 @@ function Bullet(flyDirection, x, y) {
 			this.x += speed * modifier;
 		}
 	};
+	this.collidesWith = function(target){
+		return (
+			this.x <= (target.x + 24) //Within the right edge
+				&& target.x <= (this.x + 16)
+				&& this.y <= (target.y + 24)
+				&& target.y <= (this.y + 16))
+	};
+	this.update = function(modifier){
+		this.move(modifier);
+	};
 }
 
 function Hero() {
@@ -97,10 +107,30 @@ function Hero() {
 
 	this.move = function(directions, modifier){
 		if (directions[direction.UP] && hero.y > 0) {
-			hero.y -= hero.speed * modifier;
+			if(directions[direction.RIGHT] && hero.x < canvas.width - 32){
+				hero.y -= hero.speed * modifier * 0.64642;
+				hero.x += hero.speed * modifier * 0.64642;
+				return;
+			} else if (directions[direction.LEFT] && hero.x > 0) {
+				hero.y -= hero.speed * modifier * 0.64642;
+				hero.x -= hero.speed * modifier * 0.64642;
+				return;
+			} else {
+				hero.y -= hero.speed * modifier;
+			}
 		}
-		if (directions[direction.DOWN] && hero.y < canvas.width - 32) {
-			hero.y += hero.speed * modifier;
+		if (directions[direction.DOWN] && hero.y < canvas.height - 32) {
+			if(directions[direction.RIGHT] && hero.x < canvas.width - 32){
+				hero.y += hero.speed * modifier * 0.64642;
+				hero.x += hero.speed * modifier * 0.64642;
+				return;
+			} else if (directions[direction.LEFT] && hero.x > 0) {
+				hero.y += hero.speed * modifier * 0.64642;
+				hero.x -= hero.speed * modifier * 0.64642;
+				return;
+			} else {
+				hero.y += hero.speed * modifier;
+			}
 		}
 		if (directions[direction.LEFT] && hero.x > 0) {
 			hero.x -= hero.speed * modifier;
@@ -114,7 +144,7 @@ function Hero() {
 function Monster() {
 	this.x = 0;
 	this.y = 0;
-	var maxspeed = 150;
+	var maxspeed = 90;
 	this.moveTowards = function(target, modifier){
 		if (target.x > this.x)
 			this.x += maxspeed * modifier;
@@ -154,12 +184,7 @@ var reset = function () {
 //TODO: Refactor collision logic to common function
 var bulletCollision = function() {
 	for (var i = 0; i < bullets.length; i++){
-		if (
-			bullets[i].x <= (monster.x + 24) //Within the right edge
-				&& monster.x <= (bullets[i].x + 16)
-				&& bullets[i].y <= (monster.y + 24)
-				&& monster.y <= (bullets[i].y + 16)
-		) {
+		if (bullets[i].collidesWith(monster)) {
 			bullets.splice(i, 1);
 			return true;
 		}
@@ -230,7 +255,7 @@ var update = function (modifier) {
 
 	//Move each bullet
 	for (var i = 0; i < bullets.length; i++){
-		bullets[i].move(modifier);
+		bullets[i].update(modifier);
 	}
 
 	//Hero only takes damage periodically (to avoid taking a ton of damage really quickly)
@@ -302,6 +327,8 @@ var render = function(){
 		ctx.textAlign = "center";
 		ctx.textBaseline = "center";
 		ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
+		ctx.fillText("Monsters Killed: "+monstersCaught, canvas.width/2, (canvas.height/2) + 28);
+
 	}
 };
 
